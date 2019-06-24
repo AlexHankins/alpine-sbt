@@ -1,10 +1,12 @@
 # Defaults if not specified in --build-arg
-ARG sbt_version=1.1.4
+ARG sbt_version=@@SBT_VERSION@@
 ARG sbt_home=/usr/local/sbt
+ARG sbt_sha256=@@SBT_SHA256@@
 
 FROM openjdk:jre-alpine as unzip
 ARG sbt_version
 ARG sbt_home
+ARG sbt_sha256
 
 # Cleverly placed here for caching reasons
 RUN apk add --no-cache --update bash
@@ -12,7 +14,13 @@ RUN apk add --no-cache --update bash
 # Download and extract from archive
 RUN apk add --no-cache --update wget
 RUN mkdir -pv "$sbt_home"
-RUN wget -qO - "https://github.com/sbt/sbt/releases/download/v$sbt_version/sbt-$sbt_version.tgz" >/tmp/sbt.tgz
+
+# @TODO use wget instead of COPY once I am off this plane
+# @TODO use -q0 instead of -v
+RUN wget -v - "https://github.com/sbt/sbt/releases/download/v$sbt_version/sbt-$sbt_version.tgz" >/tmp/sbt.tgz
+#COPY "sbt-$sbt_version.tgz" /tmp/sbt.tgz
+
+RUN echo "$sbt_sha256 /tmp/sbt.tgz | sha256sum -c -
 RUN tar xzf /tmp/sbt.tgz -C "$sbt_home" --strip-components=1
 
 
@@ -26,5 +34,5 @@ RUN apk add --no-cache --update bash
 COPY --from=unzip $sbt_home $sbt_home
 RUN ln -sv "$sbt_home"/bin/sbt /usr/bin/
 
-# This triggers a bunch of useful downloads.
+# This triggers a bunch of useful downloads that we want to save in the image.
 RUN sbt sbtVersion
